@@ -8,16 +8,20 @@ Currently, it supports rendering custom fragment shaders to a single quad that f
 
 ## Demos
 
-[Psychedelix](https://www.shadertoy.com/view/MdsXDM):
+- [Psychedelix](https://www.shadertoy.com/view/MdsXDM):
+
 ![demo-1.gif](https://github.com/Cubified/termgl/raw/main/img/demo-1.gif)
 
-[Diamonds and Diagonals](https://www.shadertoy.com/view/DtyXDR):
+- [Diamonds and Diagonals](https://www.shadertoy.com/view/DtyXDR):
+
 ![demo-2.gif](https://github.com/Cubified/termgl/raw/main/img/demo-2.gif)
 
-[Noisy Gradient](https://andrewlrussell.com):
+- [Noisy Gradient](https://andrewlrussell.com):
+
 ![demo-3.gif](https://github.com/Cubified/termgl/raw/main/img/demo-3.gif)
 
-[Metaballs](https://www.shadertoy.com/view/ld2GRz):
+- [Metaballs](https://www.shadertoy.com/view/ld2GRz):
+
 ![demo-4.gif](https://github.com/Cubified/termgl/raw/main/img/demo-4.gif)
 
 ## Compiling and Running
