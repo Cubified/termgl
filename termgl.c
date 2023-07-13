@@ -11,8 +11,6 @@
 #include <math.h>
 
 #define GL_SILENCE_DEPRECATION
-#include <OpenGL/gl.h>
-#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 #define glCheckErrors() \
@@ -25,9 +23,11 @@
   glGetShaderiv(shader, GL_COMPILE_STATUS, &is_compiled); \
   if (is_compiled == GL_FALSE) { \
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &max_length); \
+    msg_buf = malloc(max_length); \
     glGetShaderInfoLog(shader, max_length, &max_length, msg_buf); \
     fprintf(stderr, "%s", msg_buf); \
     glDeleteShader(shader); \
+    free(msg_buf); \
     return 4; \
   }
 
@@ -75,7 +75,7 @@ void resize(int sig) {
   int fb_w, fb_h;
 
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
-  dims.w = ws.ws_col;
+  dims.w = ws.ws_col / 2;
   dims.h = ws.ws_row;
   if (sig == -1) return;
 
@@ -95,9 +95,9 @@ int main(int argc, char **argv) {
   GLint apos_location, utime_location, is_compiled, max_length;
   GLenum err;
   struct termios raw, tio;
-  char *fragment_shader_text, *term;
-  GLchar msg_buf[512];
-  int filesize;
+  char *fragment_shader_text, *term, buf[64];
+  GLchar *msg_buf;
+  int filesize, n;
   double time = 0.0f, last = 0.0;
   FILE *fp;
 
@@ -207,14 +207,13 @@ int main(int argc, char **argv) {
         GLubyte green = pixels[index + 1];
         GLubyte blue = pixels[index + 2];
 
-        printf("\x1b[48;2;%d;%d;%dm ", red, green, blue);
+        printf("\x1b[48;2;%d;%d;%dm  ", red, green, blue);
       }
       printf("\x1b[%d;1H", y);
     }
     fflush(stdout);
 
     glfwSwapBuffers(window);
-    glfwPollEvents();
   }
   printf("\x1b[0m\x1b[2J\x1b[?1049l\x1b[?1003l\x1b[?1015l\x1b[?1006l\x1b[?25h");
 

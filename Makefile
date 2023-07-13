@@ -2,7 +2,15 @@ all: termgl
 
 CC=cc
 
-LIBS=-framework OpenGL -lGLFW -I/opt/homebrew/include -L/opt/homebrew/lib
+UNAME=$(shell uname)
+ifeq ($(UNAME),Darwin)
+        OPENGL=-framework OpenGL
+else ifeq ($(UNAME),Windows_NT)
+        OPENGL=-lopengl32
+else
+        OPENGL=-lGL
+endif
+LIBS=$(OPENGL) -lGLFW -I/opt/homebrew/include -L/opt/homebrew/lib
 CFLAGS=-O3 -pipe
 DEBUGCFLAGS=-Og -pipe -g
 
