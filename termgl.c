@@ -57,11 +57,23 @@ int running = 1;
  
 static const char *vertex_shader_text =
 "#version 110\n"
-"attribute vec2 a_pos;\n"
-"varying vec2 v_pos;\n"
+"attribute vec2 aPos;\n"
+"varying vec2 vPos;\n"
 "void main() {\n"
-"  gl_Position = vec4(a_pos, 0.0, 1.0);\n"
-"  v_pos = a_pos + 1.0;\n"
+"  gl_Position = vec4(aPos, 0.0, 1.0);\n"
+"  vPos = aPos + 1.0;\n"
+"}\n";
+static const char *fragment_shader_prefix =
+"const vec2 iResolution = vec2(1.0, 1.0);\n"
+"uniform vec3 iMouse;\n"
+"uniform float iTime;\n"
+"varying vec2 vPos;\n";
+static const char *fragment_shader_suffix =
+"\n"
+"void main() {\n"
+"  vec4 fragColor = vec4(0.0);\n"
+"  mainImage(fragColor, vPos);\n"
+"  gl_FragColor = fragColor;\n"
 "}\n";
  
 static void error_callback(int error, const char *description) {
@@ -92,10 +104,10 @@ void resize(int sig) {
  
 int main(int argc, char **argv) {
   GLuint vertex_buffer, vertex_shader, fragment_shader, program;
-  GLint apos_location, utime_location, is_compiled, max_length;
+  GLint apos_location, itime_location, imouse_location, is_compiled, max_length;
   GLenum err;
   struct termios raw, tio;
-  char *fragment_shader_text, *term, buf[64];
+  char *fragment_shader_base, *fragment_shader_text, *term, buf[64];
   GLchar *msg_buf;
   int filesize, n;
   double time = 0.0f, last = 0.0;
@@ -155,10 +167,21 @@ int main(int argc, char **argv) {
     return 3;
   }
   fseek(fp, 0, SEEK_END);
-  fragment_shader_text = malloc((filesize=ftell(fp)));
+  fragment_shader_base = malloc((filesize=ftell(fp)));
   fseek(fp, 0, SEEK_SET);
-  fread(fragment_shader_text, filesize, 1, fp);
-  fragment_shader_text[filesize] = '\0';
+  fread(fragment_shader_base, filesize, 1, fp);
+  fragment_shader_base[filesize] = '\0';
+
+  fragment_shader_text = malloc(
+    strlen(fragment_shader_prefix) + filesize + strlen(fragment_shader_suffix)
+  );
+  sprintf(
+    fragment_shader_text,
+    "%s%s%s",
+    fragment_shader_prefix,
+    fragment_shader_base,
+    fragment_shader_suffix
+  );
 
   fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
   glShaderSource(fragment_shader, 1, (const GLchar *const *)&fragment_shader_text, NULL);
@@ -176,8 +199,9 @@ int main(int argc, char **argv) {
 
   glUseProgram(program);
 
-  apos_location = glGetAttribLocation(program, "a_pos");
-  utime_location = glGetUniformLocation(program, "u_time");
+  apos_location = glGetAttribLocation(program, "aPos");
+  itime_location = glGetUniformLocation(program, "iTime");
+  imouse_location = glGetUniformLocation(program, "iMouse");
   glCheckErrors();
 
   glEnableVertexAttribArray(apos_location);
@@ -185,6 +209,7 @@ int main(int argc, char **argv) {
                         sizeof(vertices[0]), (void*)0);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glCheckErrors();
+  resize(1);
 
   printf("\x1b[?1049h\x1b[0m\x1b[2J\x1b[?1003h\x1b[?1015h\x1b[?1006h\x1b[?25l");
   while (running) {
@@ -194,7 +219,7 @@ int main(int argc, char **argv) {
 
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glUniform1f(utime_location, time);
+    glUniform1f(itime_location, time);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glReadPixels(0, 0, dims.w, dims.h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
@@ -209,7 +234,7 @@ int main(int argc, char **argv) {
 
         printf("\x1b[48;2;%d;%d;%dm  ", red, green, blue);
       }
-      printf("\x1b[%d;1H", y);
+      printf("\x1b[%d;1H", dims.h - y);
     }
     fflush(stdout);
 

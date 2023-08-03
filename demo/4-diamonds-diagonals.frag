@@ -1,11 +1,7 @@
-#version 110
 // Adapted from: https://www.shadertoy.com/view/DtyXDR
 //
 // CC0 1.0 Universal https://creativecommons.org/publicdomain/zero/1.0/
 // To the extent possible under law, Blackle Mori has waived all copyright and related or neighboring rights to this work.
-
-varying vec2 v_pos;
-uniform float u_time;
 
 vec3 erot(vec3 p, vec3 ax, float ro) {
   return mix(ax*dot(p,ax),p,cos(ro)) + cross(ax,p)*sin(ro);
@@ -45,11 +41,10 @@ vec3 randomdir(float stage) {
   return dotdir;
 }
 
-void main() {
-  vec4 fragColor;
-  vec2 uv = v_pos - 0.5;
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  vec2 uv = fragCoord - 0.5;
  
-  float t = u_time;
+  float t = iTime;
   t += length(uv)*2.5*pow(sin(t*.4)*.5+.5,8.);
   
   float stage0 = t + 0.5;
@@ -111,6 +106,4 @@ void main() {
   if (mod(stage, 4.0) == 1.0) fragColor.xyz = 1.-fragColor.xyz;
   if (mod(stage, 4.0) == 3.0) fragColor.xyz = 1.-fragColor.xxx;
   //fragColor.xyz = 1.-fragColor.xyz;
-
-  gl_FragColor = fragColor;
 }

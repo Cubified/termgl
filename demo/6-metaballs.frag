@@ -4,11 +4,6 @@
 // https://www.youtube.com/c/InigoQuilez
 // https://iquilezles.org
 
-varying vec2 v_pos;
-uniform float u_time;
-
-const vec2 iResolution = vec2(1.0, 1.0);
-
 // Using polynomial fallof of degree 5 for bounded metaballs, which produce smooth normals
 // unlike the cubic (smoothstep) based fallofs recommended in literature (such as John Hart).
 
@@ -139,12 +134,12 @@ vec3 calcNormal( in vec3 pos )
 #endif
 }
 
-void main() {
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     //-----------------------------------------------------
     // input
     //-----------------------------------------------------
 
-	vec2 q = v_pos;
+	vec2 q = fragCoord;
 
 	vec2 m = vec2(0.5);
 
@@ -167,7 +162,7 @@ void main() {
         //-----------------------------------------------------
         // animate scene
         //-----------------------------------------------------
-		float time = u_time + toff;
+		float time = iTime + toff;
 
         // move metaballs
 		for( int i=0; i<numballs; i++ )
@@ -186,7 +181,7 @@ void main() {
         // camera
         //-----------------------------------------------------
         // image plane		
-		vec2 p = (2.0*(v_pos+poff)-iResolution.xy) / iResolution.y;
+		vec2 p = (2.0*(fragCoord+poff)-iResolution.xy) / iResolution.y;
 
         // camera matrix
         vec3 ww = normalize( ta - ro );
@@ -197,7 +192,7 @@ void main() {
         // dof
         #if AA > 4
         vec3 fp = ro + rd * 5.0;
-		vec2 le = -1.0 + 2.0*hash2( dot(v_pos.xy,vec2(131.532,73.713)) + float(AA*ay+ax)*121.41 );
+		vec2 le = -1.0 + 2.0*hash2( dot(fragCoord.xy,vec2(131.532,73.713)) + float(AA*ay+ax)*121.41 );
         ro += ( uu*le.x + vv*le.y )*0.1;
         rd = normalize( fp - ro );
         #endif		
@@ -259,5 +254,5 @@ void main() {
 	// vigneting
     tot *= 0.5 + 0.5*pow( 16.0*q.x*q.y*(1.0-q.x)*(1.0-q.y), 0.15 );
 
-    gl_FragColor = vec4( tot, 1.0 );
+    fragColor = vec4( tot, 1.0 );
 }

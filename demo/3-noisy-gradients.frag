@@ -1,7 +1,3 @@
-uniform float u_time;
-
-varying vec2 v_pos;
-
 vec3 colorA = vec3(25.0, 25.0, 25.0) / 255.0;
 vec3 colorB = vec3(233.0, 233.0, 233.0) / 255.0;
 
@@ -38,13 +34,11 @@ float ease(float x) {
 
 #define SCALE 1.0
 
-void main() {
-  float noise = ease(0.2 + 0.8 * pseudo3dNoise(vec3(v_pos * SCALE, u_time * 0.5)));
-  float fudge = fract(sin((u_time / 30000.0) + dot(v_pos / (v_pos.x + 0.1), vec2(12.9898,78.233))) * 43758.5453);
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+  float noise = ease(0.2 + 0.8 * pseudo3dNoise(vec3(fragCoord * SCALE, iTime * 0.5)));
+  float fudge = fract(sin((iTime / 30000.0) + dot(fragCoord / (fragCoord.x + 0.1), vec2(12.9898,78.233))) * 43758.5453);
 
   noise *= mix(fudge, 1.0, noise);
 
-  gl_FragColor = vec4(mix(colorA, colorB, noise), 1.0);
-
-  return;
+  fragColor = vec4(mix(colorA, colorB, noise), 1.0);
 }
