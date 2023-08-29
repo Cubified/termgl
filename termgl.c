@@ -10,6 +10,10 @@
 #include <string.h>
 #include <math.h>
 
+#ifdef PTHREADS
+#include <pthread.h>
+#endif
+
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
 
@@ -31,7 +35,17 @@
     return 4; \
   }
 
+#define COORDINATE_DECODE() \
+  tok = strtok(NULL, ";"); \
+  args->x = ((float)atoi(tok)) / (2.0f * (float)dims.w); \
+  tok = strtok(NULL, ";"); \
+  args->y = 2.0f * ((float)strtol(tok, NULL, 10)) / ((float)dims.h)
+
 #define FPS 60.0f
+
+typedef struct args_t {
+  float x, y, down;
+} args_t;
  
 static const struct {
   float x, y;
@@ -101,6 +115,34 @@ void resize(int sig) {
     pixels = realloc(pixels, dims.w * dims.h * 4);
   }
 }
+
+void loop(void *raw_args) {
+  args_t *args = (args_t*)raw_args;
+  char buf[64];
+  char cpy[64];
+  char *tok;
+  int n;
+
+  while ((n=read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
+    if (n >= 8 && buf[0] == '\x1b' && buf[1] == '[' && buf[2] == '<') {
+      strncpy(cpy, buf, n);
+      tok = strtok(cpy+3, ";");
+
+      switch (tok[0]) {
+        case '0':
+          args->down = (strchr(cpy+5, 'm') == NULL) ? 1.0f : 0.0f;
+          break;
+        case '3':
+          args->down = (tok[1] == '2') ? 1.0f : 0.0f;
+          break;
+        default:
+          continue;
+      }
+
+      COORDINATE_DECODE();
+    }
+  }
+}
  
 int main(int argc, char **argv) {
   GLuint vertex_buffer, vertex_shader, fragment_shader, program;
@@ -110,14 +152,15 @@ int main(int argc, char **argv) {
   char *fragment_shader_base, *fragment_shader_text, *term, buf[64];
   GLchar *msg_buf;
   int filesize, n;
-  double time = 0.0f, last = 0.0;
   FILE *fp;
+  double time = 0.0f, last = 0.0;
 
   if (argc != 2) {
     printf("Usage: termgl [fragment shader]\n");
     return 0;
   }
 
+  /** Raw mode/signals **/
   tcgetattr(STDIN_FILENO, &tio);
   raw = tio;
   raw.c_lflag &= ~(ECHO | ICANON);
@@ -129,6 +172,7 @@ int main(int argc, char **argv) {
 
   resize(-1);
 
+  /** OpenGL context and buffers **/
   glfwSetErrorCallback(error_callback);
 
   if (!glfwInit()) {
@@ -156,6 +200,7 @@ int main(int argc, char **argv) {
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
   glCheckErrors();
 
+  /** Shader compilation **/
   vertex_shader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertex_shader, 1, &vertex_shader_text, NULL);
   glCompileShader(vertex_shader);
@@ -188,6 +233,7 @@ int main(int argc, char **argv) {
   glCompileShader(fragment_shader);
   glCheckErrors();
 
+  /** Program, attributes, and uniforms **/
   program = glCreateProgram();
   glAttachShader(program, vertex_shader);
   glAttachShader(program, fragment_shader);
@@ -211,6 +257,19 @@ int main(int argc, char **argv) {
   glCheckErrors();
   resize(1);
 
+  /** User input thread **/
+#ifdef PTHREADS
+  args_t thread_args = { 0.0f, 0.0f, 0.0f };
+  pthread_t main_thread;
+  pthread_create(
+    &main_thread,
+    NULL,
+    loop,
+    &thread_args
+  );
+#endif
+
+  /** Render loop **/
   printf("\x1b[?1049h\x1b[0m\x1b[2J\x1b[?1003h\x1b[?1015h\x1b[?1006h\x1b[?25l");
   while (running) {
     time = glfwGetTime();
@@ -220,12 +279,16 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUniform1f(itime_location, time);
+#ifdef PTHREADS
+    glUniform3f(imouse_location, thread_args.x, thread_args.y, thread_args.down);
+#endif
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glReadPixels(0, 0, dims.w, dims.h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     printf("\x1b[0;0H");
     for (int y = 0; y < dims.h; y++) {
+      printf("\x1b[%d;1H", dims.h - y);
       for (int x = 0; x < dims.w; x++) {
         int index = (y * dims.w + x) * 4;
         GLubyte red = pixels[index];
@@ -234,7 +297,6 @@ int main(int argc, char **argv) {
 
         printf("\x1b[48;2;%d;%d;%dm  ", red, green, blue);
       }
-      printf("\x1b[%d;1H", dims.h - y);
     }
     fflush(stdout);
 
@@ -242,6 +304,7 @@ int main(int argc, char **argv) {
   }
   printf("\x1b[0m\x1b[2J\x1b[?1049l\x1b[?1003l\x1b[?1015l\x1b[?1006l\x1b[?25h");
 
+  /** Cleanup **/
   free(pixels);
   free(fragment_shader_text);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &tio);

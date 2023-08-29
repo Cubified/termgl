@@ -6,6 +6,8 @@ This project uses [GLFW](https://www.glfw.org) to render an invisible OpenGL con
 
 Currently, it supports rendering custom fragment shaders to a single quad that fills the entire terminal window.  Support for custom vertex shaders (or geometries) is planned.
 
+It also supports spinning up a secondary thread via `pthreads` to handle mouse input, allowing shaders that use the `iMouse` uniform to function properly.
+
 ## Demos
 
 - [Psychedelix](https://www.shadertoy.com/view/MdsXDM):
@@ -43,6 +45,8 @@ Assuming a successful compilation, `termgl` should display the following:
 
 To close the application, send a `SIGTERM` with `Ctrl+C`.
 
+If on a system without `pthreads` support, edit the Makefile to read `PTHREADS=0` before compilation.  This will disable mouse support, but still allow shaders to be rendered.
+
 ## Running A Custom Shader
 
 To run a custom fragment shader, simply pass its filename as the first argument to `termgl`.  A minimal shader is as follows:
@@ -71,7 +75,6 @@ Others (such as `iDate`) are not yet supported.
 
 - `termgl` should work on any platform supported by GLFW including Linux, MacOS, and Windows.  However, compilation on Linux and Windows (or any other platform) is untested.
 - Running `termgl` within a terminal multiplexer such as [`tmux`](https://github.com/tmux/tmux) is not recommended for performance reasons.  For best performance, run `termgl` natively inside a GPU-accelerated terminal such as [kitty](https://sw.kovidgoyal.net/kitty) or [alacritty](https://github.com/alacritty/alacritty).
-- The uniform `iMouse` is not yet fully supported, so its value defaults to `vec3(0.0, 0.0, 0.0)`.
 - The GLSL version is system-dependent, but all shaders in `demo/` are confirmed to be working with GLSL 1.10 (i.e. `#version 110`).
 
 ## To-Do
@@ -79,8 +82,7 @@ Others (such as `iDate`) are not yet supported.
 - Add the ability to select a different geometry on which to render the shader (e.g. cube, sphere, etc.)
 - Investigate occasional crashes on window resize
 - Add more uniforms and other quality of life improvements
-- Add support for channels (i.e. custom images/textures) and interactivity (i.e. keyboard and mouse)
-- Add mouse support via `iMouse`
+- Add support for channels (i.e. custom images/textures)
 
 ## A Few of My Other Terminal Projects
 
