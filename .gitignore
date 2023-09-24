@@ -3,6 +3,7 @@ termgl
 Makefile.am
 Makefile.in
 Makefile.old
+Makefile
 aclocal.m4
 autom4te.cache
 compile
