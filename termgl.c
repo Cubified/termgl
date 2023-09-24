@@ -10,7 +10,7 @@
 #include <string.h>
 #include <math.h>
 
-#ifdef PTHREADS
+#ifdef HAVE_PTHREAD_H
 #include <pthread.h>
 #endif
 
@@ -68,6 +68,7 @@ GLFWwindow *window;
 GLubyte *pixels = NULL;
 struct winsize ws;
 int running = 1;
+char *seq;
  
 static const char *vertex_shader_text =
 "#version 110\n"
@@ -111,8 +112,10 @@ void resize(int sig) {
  
   if (pixels == NULL) {
     pixels = malloc(dims.w * dims.h * 4);
+    seq = malloc(dims.w * dims.h * 22);
   } else {
     pixels = realloc(pixels, dims.w * dims.h * 4);
+    seq = realloc(seq, dims.w * dims.h * 22);
   }
 }
 
@@ -151,7 +154,7 @@ int main(int argc, char **argv) {
   struct termios raw, tio;
   char *fragment_shader_base, *fragment_shader_text, *term, buf[64];
   GLchar *msg_buf;
-  int filesize, n;
+  int filesize, n, i;
   FILE *fp;
   double time = 0.0f, last = 0.0;
 
@@ -258,7 +261,7 @@ int main(int argc, char **argv) {
   resize(1);
 
   /** User input thread **/
-#ifdef PTHREADS
+#ifdef HAVE_PTHREAD_H
   args_t thread_args = { 0.0f, 0.0f, 0.0f };
   pthread_t main_thread;
   pthread_create(
@@ -279,25 +282,26 @@ int main(int argc, char **argv) {
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUniform1f(itime_location, time);
-#ifdef PTHREADS
+#ifdef HAVE_PTHREAD_H
     glUniform3f(imouse_location, thread_args.x, thread_args.y, thread_args.down);
 #endif
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     glReadPixels(0, 0, dims.w, dims.h, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
-    printf("\x1b[0;0H");
-    for (int y = 0; y < dims.h; y++) {
-      printf("\x1b[%d;1H", dims.h - y);
+    i = sprintf(seq, "\x1b[2J\x1b[0H\x1b[0m");
+    for (int y = 0; y < dims.h - 1; y++) {
       for (int x = 0; x < dims.w; x++) {
-        int index = (y * dims.w + x) * 4;
-        GLubyte red = pixels[index];
-        GLubyte green = pixels[index + 1];
-        GLubyte blue = pixels[index + 2];
+        int index = ((dims.h - y) * dims.w + x) * 4;
+        GLubyte red = pixels[index] & 0xff;
+        GLubyte green = pixels[index + 1] & 0xff;
+        GLubyte blue = pixels[index + 2] & 0xff;
 
-        printf("\x1b[48;2;%d;%d;%dm  ", red, green, blue);
+        i += sprintf(seq + i, "\x1b[48;2;%u;%u;%um  ", red, green, blue);
       }
+      i += sprintf(seq + i, "\n");
     }
+    puts(seq);
     fflush(stdout);
 
     glfwSwapBuffers(window);
@@ -305,6 +309,7 @@ int main(int argc, char **argv) {
   printf("\x1b[0m\x1b[2J\x1b[?1049l\x1b[?1003l\x1b[?1015l\x1b[?1006l\x1b[?25h");
 
   /** Cleanup **/
+  free(seq);
   free(pixels);
   free(fragment_shader_text);
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &tio);

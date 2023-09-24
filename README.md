@@ -32,9 +32,10 @@ It also supports spinning up a secondary thread via `pthreads` to handle mouse i
 
 ## Compiling and Running
 
-Prior to compiling, ensure that [GLFW](https://www.glfw.org) has been installed.  Then, run:
+Prior to compiling, ensure that [GLFW](https://www.glfw.org) and [OpenGL](https://opengl.org) have been installed.  Then, run:
 
 ```sh
+$ ./configure --with-pthreads
 $ make
 $ ./termgl demos/1-basic.frag
 ```
@@ -45,7 +46,7 @@ Assuming a successful compilation, `termgl` should display the following:
 
 To close the application, send a `SIGTERM` with `Ctrl+C`.
 
-If on a system without `pthreads` support, edit the Makefile to read `PTHREADS=0` before compilation.  This will disable mouse support, but still allow shaders to be rendered.
+If on a system without `pthreads` support, run `./configure` without the `--with-pthreads` argument.  This will disable mouse support, but still allow shaders to be rendered.
 
 ## Running A Custom Shader
 
@@ -73,7 +74,7 @@ Others (such as `iDate`) are not yet supported.
 
 ## Notes
 
-- `termgl` should work on any platform supported by GLFW including Linux, MacOS, and Windows.  However, compilation on Linux and Windows (or any other platform) is untested.
+- `termgl` should work on any platform supported by GLFW including Linux, MacOS, and Windows.  However, Windows is untested at this time.
 - Running `termgl` within a terminal multiplexer such as [`tmux`](https://github.com/tmux/tmux) is not recommended for performance reasons.  For best performance, run `termgl` natively inside a GPU-accelerated terminal such as [kitty](https://sw.kovidgoyal.net/kitty) or [alacritty](https://github.com/alacritty/alacritty).
 - The GLSL version is system-dependent, but all shaders in `demo/` are confirmed to be working with GLSL 1.10 (i.e. `#version 110`).
 
